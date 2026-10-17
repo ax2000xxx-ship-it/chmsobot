@@ -1,0 +1,61 @@
+const { Client, GatewayIntentBits, EmbedVersion, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+
+// قراءة ملف الإعدادات
+const configPath = path.join(__dirname, 'config.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+// إنشاء عميل البوت مع تفعيل الصلاحيات اللازمة للأعضاء
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers, // مهم جداً لأحداث دخول الأعضاء
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+client.once('ready', () => {
+    console.log(`تم تسجيل الدخول بنجاح باسم: ${client.user.tag}`);
+});
+
+// حدث عند دخول عضو جديد إلى السيرفر
+client.on('guildMemberAdd', async member => {
+    // 1. نظام إعطاء الرتبة التلقائية (Auto-Role)
+    try {
+        const role = member.guild.roles.cache.get(config.autoRoleId);
+        if (role) {
+            await member.roles.add(role);
+            console.log(`تم إعطاء الرتبة ${role.name} للعضو ${member.user.tag}`);
+        } else {
+            console.log('لم يتم العثور على الرتبة المحددة في الإعدادات.');
+        }
+    } catch (error) {
+        console.error('حدث خطأ أثناء محاولة إعطاء الرتبة:', error);
+    }
+
+    // 2. نظام الترحيب الاحترافي (Welcome Message)
+    try {
+        const welcomeChannel = member.guild.channels.cache.get(config.welcomeChannelId);
+        if (!welcomeChannel) return;
+
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor(0x00AE86)
+            .setTitle('👋 عضـو جديـد انضم إلينا!')
+            .setDescription(`أهلاً بك يا ${member} في سيرفر **${member.guild.name}**!\nنحن سعطى بوجودك معنا، نتمنى لك قضاء وقت ممتع.`)
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
+            .addFields(
+                { name: '📊 عدد أعضاء السيرفر', value: `${member.guild.memberCount} عضواً`, inline: true }
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Welcome Bot', iconURL: member.guild.iconURL({ dynamic: true }) });
+
+        await welcomeChannel.send({ content: `مرحباً بك ${member}! 🎉`, embeds: [welcomeEmbed] });
+    } catch (error) {
+        console.error('حدث خطأ أثناء إرسال رسالة الترحيب:', error);
+    }
+});
+
+// تشغيل البوت باستخدام التوكن
+client.login(config.token);
