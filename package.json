@@ -1,0 +1,9 @@
+{
+  "name": "discord-welcome-bot",
+  "version": "1.0.0",
+  "description": "A modern discord welcome and auto-role bot",
+  "main": "index.js",
+  "dependencies": {
+    "discord.js": "^14.14.1"
+  }
+}
